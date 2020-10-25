@@ -1,4 +1,6 @@
 # SlashBot
+[@RongSlashBot](https://t.me/RongSlashBot)
+
 ## Usage
 
 ```sh
@@ -11,3 +13,5 @@ docker create \
 ```sh
 docker start [container name]
 ```
+
+![](resources/example.jpg)
