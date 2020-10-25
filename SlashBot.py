@@ -9,9 +9,11 @@ else:
     raise Exception('no token')
 
 def mention(user):
+    space = ' '
     if 'last_name' not in user:
         user['last_name'] = ''
-    return f"[{user['first_name']} {user['last_name']}](tg://user?id={user['id']})"
+        space = ''
+    return f"[{user['first_name']}{space}{user['last_name']}](tg://user?id={user['id']})"
 
 
 def reply(update, context):
