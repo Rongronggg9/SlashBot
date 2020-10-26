@@ -1,12 +1,16 @@
-from telegram.ext import Updater, MessageHandler, filters
 import os
+import re
+from telegram.ext import Updater, MessageHandler, filters
+
 Filters = filters.Filters
+parser = re.compile(r'^\/(\S+)( *)(\S*)$')
 
 # Docker env
 if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
     Token = os.environ['TOKEN']
 else:
     raise Exception('no token')
+
 
 def mention(user):
     space = ' '
@@ -16,11 +20,19 @@ def mention(user):
     return f"[{user['first_name']}{space}{user['last_name']}](tg://user?id={user['id']})"
 
 
+def get_text(mention_from, mention_rpl, command):
+    parsed = parser.search(command).groups()
+    if parsed[2]:
+        return f"{mention_from} {parsed[0]} {mention_rpl} {parsed[2]}！"
+    else:
+        return f"{mention_from} {parsed[0]} 了 {mention_rpl}！"
+
+
 def reply(update, context):
     print(repr(update.to_dict()))
     msg = update.to_dict()['message']
+    command = msg['text']
     msg_from = msg['from']
-    command = msg['text'].lstrip('/')
 
     if 'reply_to_message' in msg.keys() and msg['reply_to_message']['from'] != msg_from:
         msg_rpl = msg['reply_to_message']['from']
@@ -29,14 +41,14 @@ def reply(update, context):
 
     mention_from = mention(msg_from)
     mention_rpl = mention(msg_rpl)
-    text = f"{mention_from} {command} 了 {mention_rpl}！"
+    text = get_text(mention_from, mention_rpl, command)
 
     update.effective_message.reply_text(text, parse_mode='Markdown')
 
 
 updater = Updater(token=Token, use_context=True)
 dp = updater.dispatcher
-dp.add_handler(MessageHandler(Filters.regex(r'^\/([^\s@]+)$'), reply))
+dp.add_handler(MessageHandler(Filters.regex(r'^\/([^@]+)$'), reply))
 
 updater.start_polling()
 updater.idle()
