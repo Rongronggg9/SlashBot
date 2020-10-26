@@ -21,13 +21,17 @@ def reply(update, context):
     msg = update.to_dict()['message']
     msg_from = msg['from']
     command = msg['text'].lstrip('/')
-    if 'reply_to_message' in msg.keys():
+
+    if 'reply_to_message' in msg.keys() and msg['reply_to_message']['from'] != msg_from:
         msg_rpl = msg['reply_to_message']['from']
     else:
-        msg_rpl = msg_from
+        msg_rpl = {'first_name': '自己', 'id': msg_from['id']}
 
-    update.effective_message.reply_text(f'{mention(msg_from)} {command} 了 {mention(msg_rpl)}！',
-                                        parse_mode='Markdown')
+    mention_from = mention(msg_from)
+    mention_rpl = mention(msg_rpl)
+    text = f"{mention_from} {command} 了 {mention_rpl}！"
+
+    update.effective_message.reply_text(text, parse_mode='Markdown')
 
 
 updater = Updater(token=Token, use_context=True)
