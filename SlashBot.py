@@ -48,7 +48,7 @@ def reply(update, context):
 
 updater = Updater(token=Token, use_context=True)
 dp = updater.dispatcher
-dp.add_handler(MessageHandler(Filters.regex(r'^\/([^@]+)$'), reply))
+dp.add_handler(MessageHandler(Filters.regex(parser), reply))
 
 updater.start_polling()
 updater.idle()
