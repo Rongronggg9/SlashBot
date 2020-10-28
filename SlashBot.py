@@ -3,7 +3,7 @@ import re
 from telegram.ext import Updater, MessageHandler, filters
 
 Filters = filters.Filters
-parser = re.compile(r'^\/(\S+)([ 　]*)(\S*)(.*)$')
+parser = re.compile(r'^\/(\S+)([ 　]*)(.*)$')
 
 # Docker env
 if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
@@ -21,7 +21,7 @@ def mention(user):
 
 
 def get_text(mention_from, mention_rpl, command):
-    parsed = [delUsername.sub('', p) for p in parser.search(command).groups()]
+    parsed = parser.search(delUsername.sub('', command)).groups()
     if parsed[2]:
         return f"{mention_from} {parsed[0]} {mention_rpl} {parsed[2]}！"
     else:
