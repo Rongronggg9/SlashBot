@@ -35,7 +35,7 @@ docker start [container name]
 1. 群组内存在大于一个 bot
 2. 该 bot 未被设置为管理员
 3. 该 bot Privacy Mode on
-4. 指令未指明目标 (如 /example)
+4. 指令未指明目标 (如 `/example`)
 
 总体上，管理员或 Privacy Mode off 的 bot 几乎一定会收到消息，其余 bot 可能收到也可能收不到消息。
 
@@ -43,4 +43,4 @@ docker start [container name]
 1. **仅保留本 bot**
 2. **将本 bot 添加为管理员（给予任一权限均可。需注意<u>该操作意味着对于本群，该 bot Privacy Mode off</u>）**
 3. **换用 Privacy Mode off 的 [@RongSlashRBot](https://t.me/RongSlashRBot) (如您疑虑安全性，请自行搭建)**
-4. **给指令指明目标 (如 /example@RongSlashBot)，触发成功后<u>一段时间内</u> ，不需再指明目标也可使 bot 接收到指令**
+4. **给指令指明目标 (如 `/example@RongSlashBot`)，触发成功后<u>一段时间内</u> ，不需再指明目标也可使 bot 接收到指令**
