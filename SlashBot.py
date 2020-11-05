@@ -22,14 +22,16 @@ def mention(user):
 
 def get_text(mention_from, mention_rpl, command):
     parsed = parser.search(delUsername.sub('', command)).groups()
-    if parsed[2]:
+    if parsed[0] == 'me':
+        return f"{mention_from} {parsed[2]}！"
+    elif parsed[2]:
         return f"{mention_from} {parsed[0]} {mention_rpl} {parsed[2]}！"
     else:
         return f"{mention_from} {parsed[0]} 了 {mention_rpl}！"
 
 
 def reply(update, context):
-    print(repr(update.to_dict()))
+    print(update.to_dict())
     msg = update.to_dict()['message']
     command = msg['text']
     msg_from = msg['from']
@@ -42,6 +44,7 @@ def reply(update, context):
     mention_from = mention(msg_from)
     mention_rpl = mention(msg_rpl)
     text = get_text(mention_from, mention_rpl, command)
+    print(text)
 
     update.effective_message.reply_text(text, parse_mode='Markdown')
 
