@@ -24,6 +24,8 @@ def get_text(mention_from, mention_rpl, command):
     parsed = parser.search(delUsername.sub('', command)).groups()
     if parsed[0] == 'me':
         return f"{mention_from} {parsed[2]}！"
+    elif parsed[0] == 'you':
+        return f"{mention_rpl} {parsed[2]}！"
     elif parsed[2]:
         return f"{mention_from} {parsed[0]} {mention_rpl} {parsed[2]}！"
     else:
