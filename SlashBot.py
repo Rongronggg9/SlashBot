@@ -2,6 +2,8 @@ import os
 import re
 from telegram.ext import Updater, MessageHandler, filters
 
+TELEGRAM = 777000
+GROUP = 1087968824
 Filters = filters.Filters
 parser = re.compile(r'^\/(\S+)([ 　]*)(.*)$')
 
@@ -10,6 +12,27 @@ if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
     Token = os.environ['TOKEN']
 else:
     raise Exception('no token')
+
+
+def get_user(msg):
+    if msg['from']['id'] == TELEGRAM:
+        return {'first_name': msg['forward_from_chat']['title'], 'id': msg['forward_from_chat']['id']}
+    elif msg['from']['id'] == GROUP:
+        return {'first_name': msg['chat']['title'], 'id': msg['chat']['id']}
+    else:
+        return msg['from']
+
+
+def get_users(msg):
+    msg_from = msg
+    if 'reply_to_message' in msg.keys():
+        msg_rpl = msg['reply_to_message']
+    else:
+        msg_rpl = msg_from.copy()
+    from_user, rpl_user = get_user(msg_from), get_user(msg_rpl)
+    if rpl_user == from_user:
+        rpl_user = {'first_name': '自己', 'id': rpl_user['id']}
+    return from_user, rpl_user
 
 
 def mention(user):
@@ -36,17 +59,12 @@ def reply(update, context):
     print(update.to_dict())
     msg = update.to_dict()['message']
     command = msg['text']
-    msg_from = msg['from']
+    from_user, rpl_user = get_users(msg)
 
-    if 'reply_to_message' in msg.keys() and msg['reply_to_message']['from'] != msg_from:
-        msg_rpl = msg['reply_to_message']['from']
-    else:
-        msg_rpl = {'first_name': '自己', 'id': msg_from['id']}
+    mention_from, mention_rpl = mention(from_user), mention(rpl_user)
 
-    mention_from = mention(msg_from)
-    mention_rpl = mention(msg_rpl)
     text = get_text(mention_from, mention_rpl, command)
-    print(text)
+    print(text, end='\n\n')
 
     update.effective_message.reply_text(text, parse_mode='Markdown')
 
