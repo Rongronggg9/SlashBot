@@ -45,7 +45,7 @@ def mention(user):
 
 
 def get_text(mention_from, mention_rpl, command):
-    parsed = parser.search(delUsername.sub('', command)).groups()
+    parsed = list(parser.search(delUsername.sub('', command)).groups())
     for escape in escaping:
         parsed[0] = parsed[0].replace(escape, escape[1:])
     if parsed[0] == 'me':
