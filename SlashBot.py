@@ -5,7 +5,8 @@ from telegram.ext import Updater, MessageHandler, filters
 TELEGRAM = 777000
 GROUP = 1087968824
 Filters = filters.Filters
-parser = re.compile(r'^\/(\S+)([ 　]*)(.*)$')
+parser = re.compile(r'^\/((?:[^ 　\\]|\\.)+)([ 　]*)(.*)$')
+escaping = ('\\ ', '\\　')
 
 # Docker env
 if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
@@ -45,6 +46,8 @@ def mention(user):
 
 def get_text(mention_from, mention_rpl, command):
     parsed = parser.search(delUsername.sub('', command)).groups()
+    for escape in escaping:
+        parsed[0] = parsed[0].replace(escape, escape[1:])
     if parsed[0] == 'me':
         return f"{mention_from} {parsed[2]}！"
     elif parsed[0] == 'you':
