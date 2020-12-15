@@ -49,9 +49,9 @@ def get_text(mention_from, mention_rpl, command):
     for escape in escaping:
         parsed[0] = parsed[0].replace(escape, escape[1:])
     if parsed[0] == 'me':
-        return f"{mention_from} {parsed[2]}！"
+        return f"{mention_from}{bool(parsed[1])*' '}{parsed[2]}！"
     elif parsed[0] == 'you':
-        return f"{mention_rpl} {parsed[2]}！"
+        return f"{mention_rpl}{bool(parsed[1])*' '}{parsed[2]}！"
     elif parsed[2]:
         return f"{mention_from} {parsed[0]} {mention_rpl} {parsed[2]}！"
     else:
