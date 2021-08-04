@@ -20,7 +20,7 @@ else:
 
 # Find someone's full name by their username
 def find_name_by_username(username: str) -> str:
-    r = requests.get(f'https://t.me/{username}')
+    r = requests.get(f'https://t.me/{username.replace("@", "")}')
     return re.search('(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
 
 
