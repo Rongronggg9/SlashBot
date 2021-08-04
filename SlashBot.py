@@ -62,12 +62,20 @@ def get_users(msg):
     return from_user, rpl_user
 
 
-def mention(user):
-    space = ' '
-    if 'last_name' not in user:
-        user['last_name'] = ''
-        space = ''
-    return f"[{user['first_name']}{space}{user['last_name']}](tg://user?id={user['id']})"
+# Create mention string from user
+def mention(user: Dict[str, str]) -> str:
+
+    # Combine name
+    last = user.get('last_name', '')
+    first = user['first_name']
+    name = first + (f' {last}' if last else '')
+
+    # Create user reference link
+    username = user.get('username', '')
+    uid = user.get('id', '')
+    link = f'tg://resolve?domain={username}' if username else f'tg://user?id={uid}'
+
+    return f"[{name}]({link})"
 
 
 def get_text(mention_from, mention_rpl, command):
