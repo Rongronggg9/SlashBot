@@ -95,12 +95,13 @@ def get_text(mention_from, mention_rpl, command):
 def reply(update, context):
     print(update.to_dict())
     msg = update.to_dict()['message']
-    command = msg['text']
     from_user, rpl_user = get_users(msg)
 
-    mention_from, mention_rpl = mention(from_user), mention(rpl_user)
+    # Escape markdown
+    command = msg['text']
+    command = command.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
 
-    text = get_text(mention_from, mention_rpl, command)
+    text = get_text(mention(from_user), mention(rpl_user), command)
     print(text, end='\n\n')
 
     update.effective_message.reply_text(text, parse_mode='Markdown')
