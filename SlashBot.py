@@ -40,8 +40,25 @@ def get_users(msg):
     else:
         msg_rpl = msg_from.copy()
     from_user, rpl_user = get_user(msg_from), get_user(msg_rpl)
+
+    # Not replying to anything
     if rpl_user == from_user:
-        rpl_user = {'first_name': '自己', 'id': rpl_user['id']}
+
+        # Detect if the message contains a mention. If it has, use the mentioned user.
+        entities: List[Dict[str, Union[str, int]]] = msg['entities']
+        mentions = [e for e in entities if e['type'] == 'mention']
+        if mentions:
+
+            # Find username
+            offset = mentions[0]['offset']
+            length = mentions[0]['length']
+            text = msg['text']
+            username = text[offset : offset + length]
+            rpl_user = {'first_name': find_name_by_username(username), 'username': username}
+
+        else:
+            rpl_user = {'first_name': '自己', 'id': rpl_user['id']}
+
     return from_user, rpl_user
 
 
