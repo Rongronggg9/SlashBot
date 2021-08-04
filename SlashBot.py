@@ -1,5 +1,8 @@
 import os
 import re
+from typing import List, Dict, Union
+
+import requests
 from telegram.ext import Updater, MessageHandler, filters
 
 TELEGRAM = 777000
@@ -13,6 +16,12 @@ if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
     Token = os.environ['TOKEN']
 else:
     raise Exception('no token')
+
+
+# Find someone's full name by their username
+def find_name_by_username(username: str) -> str:
+    r = requests.get(f'https://t.me/{username}')
+    return re.search('(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
 
 
 def get_user(msg):
