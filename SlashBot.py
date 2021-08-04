@@ -56,6 +56,9 @@ def get_users(msg):
             username = text[offset : offset + length]
             rpl_user = {'first_name': find_name_by_username(username), 'username': username}
 
+            # Remove mention from message text
+            msg['text'] = text[:offset] + text[offset + length:]
+
         else:
             rpl_user = {'first_name': '自己', 'id': rpl_user['id']}
 
