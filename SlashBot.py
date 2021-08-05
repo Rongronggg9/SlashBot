@@ -110,10 +110,11 @@ def reply(update, context):
     update.effective_message.reply_text(text, parse_mode='Markdown')
 
 
-updater = Updater(token=Token, use_context=True)
-delUsername = re.compile('@' + updater.bot.username, re.I)
-dp = updater.dispatcher
-dp.add_handler(MessageHandler(Filters.regex(parser), reply))
+if __name__ == '__main__':
+    updater = Updater(token=Token, use_context=True)
+    delUsername = re.compile('@' + updater.bot.username, re.I)
+    dp = updater.dispatcher
+    dp.add_handler(MessageHandler(Filters.regex(parser), reply))
 
-updater.start_polling()
-updater.idle()
+    updater.start_polling()
+    updater.idle()
