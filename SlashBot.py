@@ -8,8 +8,9 @@ from telegram.ext import Updater, MessageHandler, filters
 TELEGRAM = 777000
 GROUP = 1087968824
 Filters = filters.Filters
-parser = re.compile(r'^\/((?:[^ 　\\]|\\.)+)([ 　]*)(.*)$')
+parser = re.compile(r'^([\\/]_?)((?:[^ 　\\]|\\.)+)[ 　]*(.*)$')
 escaping = ('\\ ', '\\　')
+markdownEscape = lambda s: s.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
 
 # Docker env
 if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
@@ -40,9 +41,10 @@ def get_users(msg):
     else:
         msg_rpl = msg_from.copy()
     from_user, rpl_user = get_user(msg_from), get_user(msg_rpl)
+    reply_self = rpl_user == from_user
 
     # Not replying to anything
-    if rpl_user == from_user:
+    if reply_self:
 
         # Detect if the message contains a mention. If it has, use the mentioned user.
         entities: List[Dict[str, Union[str, int]]] = msg['entities']
@@ -62,7 +64,7 @@ def get_users(msg):
         else:
             rpl_user = {'first_name': '自己', 'id': rpl_user['id']}
 
-    return from_user, rpl_user
+    return from_user, rpl_user, reply_self
 
 
 # Create mention string from user
@@ -81,28 +83,33 @@ def mention(user: Dict[str, str]) -> str:
     return f"[{name}]({link})"
 
 
-def get_text(mention_from, mention_rpl, command):
-    parsed = list(parser.search(delUsername.sub('', command)).groups())
+def parse_command(command):
+    parsed = list(parser.search(command).groups())
+    predicate = parsed[1]
     for escape in escaping:
-        parsed[0] = parsed[0].replace(escape, escape[1:])
-    if parsed[0] == 'me':
-        return f"{mention_from}{bool(parsed[1])*' '}{parsed[2]}！"
-    elif parsed[0] == 'you':
-        return f"{mention_rpl}{bool(parsed[1])*' '}{parsed[2]}！"
-    elif parsed[2]:
-        return f"{mention_from} {parsed[0]} {mention_rpl} {parsed[2]}！"
+        predicate = predicate.replace(escape, escape[1:])
+    result = {'predicate': markdownEscape(predicate), 'complement': markdownEscape(parsed[2]), 'swap': parsed[0] != '/'}
+    return result
+
+def get_text(mention_from, mention_rpl, command):
+    if command['predicate'] == 'me':
+        return f"{mention_from}{bool(command['complement'])*' '}{command['complement']}！"
+    elif command['predicate'] == 'you':
+        return f"{mention_rpl}{bool(command['complement'])*' '}{command['complement']}！"
+    elif command['complement']:
+        return f"{mention_from} {command['predicate']} {mention_rpl} {command['complement']}！"
     else:
-        return f"{mention_from} {parsed[0]} 了 {mention_rpl}！"
+        return f"{mention_from} {command['predicate']} 了 {mention_rpl}！"
 
 
 def reply(update, context):
     print(update.to_dict())
     msg = update.to_dict()['message']
-    from_user, rpl_user = get_users(msg)
+    from_user, rpl_user, reply_self = get_users(msg)
 
-    # Escape markdown
-    command = msg['text']
-    command = command.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
+    command = parse_command(del_username.sub('', msg['text']))
+    if command['swap'] and not reply_self:
+        (from_user, rpl_user) = (rpl_user, from_user)
 
     text = get_text(mention(from_user), mention(rpl_user), command)
     print(text, end='\n\n')
@@ -112,7 +119,7 @@ def reply(update, context):
 
 if __name__ == '__main__':
     updater = Updater(token=Token, use_context=True)
-    delUsername = re.compile('@' + updater.bot.username, re.I)
+    del_username = re.compile('@' + updater.bot.username, re.I)
     dp = updater.dispatcher
     dp.add_handler(MessageHandler(Filters.regex(parser), reply))
 
