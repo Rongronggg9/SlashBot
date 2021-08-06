@@ -21,7 +21,7 @@ else:
 
 # Find someone's full name by their username
 def find_name_by_username(username: str) -> str:
-    r = requests.get(f'https://t.me/{username.replace("@", "")}')
+    r = requests.get(f'https://t.me/{username}')
     return re.search('(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
 
 
@@ -55,7 +55,7 @@ def get_users(msg):
             offset = mentions[0]['offset']
             length = mentions[0]['length']
             text = msg['text']
-            username = text[offset : offset + length]
+            username = text[offset : offset + length].replace("@", "")
             rpl_user = {'first_name': find_name_by_username(username), 'username': username}
 
             # Remove mention from message text
