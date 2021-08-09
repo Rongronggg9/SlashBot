@@ -1,6 +1,6 @@
 import os
 import re
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 
 import requests
 from telegram.ext import Updater, MessageHandler, filters
@@ -41,7 +41,7 @@ def get_user(msg):
         return msg['from']
 
 
-def get_users(msg):
+def get_users(msg: Dict) -> Tuple[Dict, Dict, bool, bool]:
     msg_from = msg
     if 'reply_to_message' in msg.keys():
         msg_rpl = msg['reply_to_message']
@@ -49,6 +49,7 @@ def get_users(msg):
         msg_rpl = msg_from.copy()
     from_user, rpl_user = get_user(msg_from), get_user(msg_rpl)
     reply_self = rpl_user == from_user
+    mentioned = False
 
     # Not replying to anything
     if reply_self:
@@ -57,6 +58,7 @@ def get_users(msg):
         entities: List[Dict[str, Union[str, int]]] = msg['entities']
         mentions = [e for e in entities if e['type'] == 'mention']
         if mentions:
+            mentioned = True
 
             # Find username
             offset = mentions[0]['offset']
@@ -71,7 +73,7 @@ def get_users(msg):
         else:
             rpl_user = {'first_name': '自己', 'id': rpl_user['id']}
 
-    return from_user, rpl_user, reply_self
+    return from_user, rpl_user, reply_self, mentioned
 
 
 # Create mention string from user
@@ -112,10 +114,10 @@ def get_text(mention_from, mention_rpl, command):
 def reply(update, context):
     print(update.to_dict())
     msg = update.to_dict()['message']
-    from_user, rpl_user, reply_self = get_users(msg)
+    from_user, rpl_user, reply_self, mentioned = get_users(msg)
 
     command = parse_command(del_username.sub('', msg['text']))
-    if command['swap'] and not reply_self:
+    if command['swap'] and (not reply_self or mentioned):
         (from_user, rpl_user) = (rpl_user, from_user)
 
     text = get_text(mention(from_user), mention(rpl_user), command)
