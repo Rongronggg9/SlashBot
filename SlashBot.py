@@ -55,7 +55,7 @@ def get_users(msg):
             offset = mentions[0]['offset']
             length = mentions[0]['length']
             text = msg['text']
-            username = text[offset : offset + length].replace("@", "")
+            username = text[offset: offset + length].replace("@", "")
             rpl_user = {'first_name': find_name_by_username(username), 'username': username}
 
             # Remove mention from message text
@@ -69,7 +69,6 @@ def get_users(msg):
 
 # Create mention string from user
 def mention(user: Dict[str, str]) -> str:
-
     # Combine name
     last = user.get('last_name', '')
     first = user['first_name']
@@ -91,11 +90,12 @@ def parse_command(command):
     result = {'predicate': markdownEscape(predicate), 'complement': markdownEscape(parsed[2]), 'swap': parsed[0] != '/'}
     return result
 
+
 def get_text(mention_from, mention_rpl, command):
     if command['predicate'] == 'me':
-        return f"{mention_from}{bool(command['complement'])*' '}{command['complement']}！"
+        return f"{mention_from}{bool(command['complement']) * ' '}{command['complement']}！"
     elif command['predicate'] == 'you':
-        return f"{mention_rpl}{bool(command['complement'])*' '}{command['complement']}！"
+        return f"{mention_rpl}{bool(command['complement']) * ' '}{command['complement']}！"
     elif command['complement']:
         return f"{mention_from} {command['predicate']} {mention_rpl} {command['complement']}！"
     else:
