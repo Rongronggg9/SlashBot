@@ -77,8 +77,8 @@ def mention(user: Dict[str, str]) -> str:
 
     # Create user reference link
     username = user.get('username', '')
-    uid = user.get('id', '')
-    link = f'tg://resolve?domain={username}' if username else f'tg://user?id={uid}'
+    uid = user.get('id', -1)
+    link = f'tg://resolve?domain={username}' if (username and uid < 0) else f'tg://user?id={uid}'
 
     return f"[{name}]({link})"
 
