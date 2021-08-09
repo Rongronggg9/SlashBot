@@ -18,10 +18,17 @@ if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
 else:
     raise Exception('no token')
 
+if os.environ.get('PROXY') and os.environ['PROXY'] != 'X':
+    telegram_proxy = os.environ['PROXY']
+    requests_proxies = {'all': os.environ['PROXY']}
+else:
+    telegram_proxy = ''
+    requests_proxies = None
+
 
 # Find someone's full name by their username
 def find_name_by_username(username: str) -> str:
-    r = requests.get(f'https://t.me/{username}')
+    r = requests.get(f'https://t.me/{username}', proxies=requests_proxies)
     return re.search('(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
 
 
@@ -118,7 +125,7 @@ def reply(update, context):
 
 
 if __name__ == '__main__':
-    updater = Updater(token=Token, use_context=True)
+    updater = Updater(token=Token, use_context=True, request_kwargs={'proxy_url': telegram_proxy})
     del_username = re.compile('@' + updater.bot.username, re.I)
     dp = updater.dispatcher
     dp.add_handler(MessageHandler(Filters.regex(parser), reply))
