@@ -34,9 +34,10 @@ def find_name_by_username(username: str) -> str:
 
 def get_user(msg):
     if msg['from']['id'] == TELEGRAM:
-        return {'first_name': msg['forward_from_chat']['title'], 'id': msg['forward_from_chat']['id']}
+        return {'first_name': msg['sender_chat']['title'], 'id': msg['sender_chat']['id'],
+                'username': msg['sender_chat'].get('username')}
     elif msg['from']['id'] == GROUP:
-        return {'first_name': msg['chat']['title'], 'id': msg['chat']['id']}
+        return {'first_name': msg['chat']['title'], 'id': msg['chat']['id'], 'username': msg['chat'].get('username')}
     else:
         return msg['from']
 
