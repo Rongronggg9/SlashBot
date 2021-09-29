@@ -13,12 +13,11 @@ escaping = ('\\ ', '\\　')
 markdownEscape = lambda s: s.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
 
 # Docker env
-if os.environ.get('TOKEN') and os.environ['TOKEN'] != 'X':
-    Token = os.environ['TOKEN']
-else:
+Token = os.environ.get('TOKEN')
+if not Token:
     raise Exception('no token')
 
-if os.environ.get('PROXY') and os.environ['PROXY'] != 'X':
+if os.environ.get('PROXY'):
     telegram_proxy = os.environ['PROXY']
     requests_proxies = {'all': os.environ['PROXY']}
 else:
