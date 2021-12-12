@@ -1,106 +1,87 @@
 import os
 import re
-from typing import List, Dict, Union, Tuple
-
 import requests
+import telegram
+from typing import Tuple, Optional, Callable
 from telegram.ext import Updater, MessageHandler, filters
 
-TELEGRAM = 777000
-GROUP = 1087968824
 Filters = filters.Filters
-parser = re.compile(r'^([\\/]_?)((?:[^ 　\\]|\\.)+)[ 　]*(.*)$')
-escaping = ('\\ ', '\\　')
-markdownEscape = lambda s: s.replace("_", "\\_").replace("*", "\\*").replace("[", "\\[").replace("`", "\\`")
+parser = re.compile(r'^([\\/]_?)((?:[^ 　\t\\]|\\.)+)[ 　\t]*(.*)$')
+ESCAPING = ('\\ ', '\\　', '\\\t')
+htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
+mentionParser = re.compile(r'@([a-zA-Z]\w{4,})$')
+delUsername: Optional[Callable] = None  # placeholder
 
 # Docker env
 Token = os.environ.get('TOKEN')
 if not Token:
     raise Exception('no token')
 
-if os.environ.get('PROXY'):
-    telegram_proxy = os.environ['PROXY']
-    requests_proxies = {'all': os.environ['PROXY']}
-else:
-    telegram_proxy = ''
-    requests_proxies = None
+telegram_proxy = os.environ.get('PROXY', '')
+requests_proxies = {'all': telegram_proxy} if telegram_proxy else None
 
 
-# Find someone's full name by their username
-def find_name_by_username(username: str) -> str:
-    r = requests.get(f'https://t.me/{username}', proxies=requests_proxies)
-    return re.search('(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
+class User:
+    def __init__(self, uid: Optional[int] = None, username: Optional[str] = None, name: Optional[str] = None):
+        if not (uid and name) and not username:
+            raise ValueError('invalid user')
+        self.name = name
+        self.uid = uid
+        self.username = username
+        if not self.name and self.username:
+            self.__get_user_by_username()
+
+    def __get_user_by_username(self):
+        r = requests.get(f'https://t.me/{self.username}', proxies=requests_proxies)
+        self.name = re.search(r'(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
+        page_title = re.search(r'(?<=<title>).*(?=</title>)', r.text, re.IGNORECASE).group(0)
+        if page_title == self.name:  # user does not exist
+            self.name = None
+
+    def mention(self, mention_self: bool = False) -> str:
+        if not self.name:
+            return f'@{self.username}'
+
+        mention_deep_link = (f'tg://resolve?domain={self.username}'
+                             if (self.username and (not self.uid or self.uid < 0))
+                             else f'tg://user?id={self.uid}')
+        return f'<a href ="{mention_deep_link}">{self.name if not mention_self else "自己"}</a>'
+
+    def __eq__(self, other):
+        return (
+                type(self) == type(other)
+                and (
+                        ((self.uid or other.uid) and self.uid == other.uid) or
+                        ((self.username or other.username) and self.username == other.username)
+                )
+        )
 
 
-def get_user(msg):
-    if msg['from']['id'] == TELEGRAM:
-        return {'first_name': msg['sender_chat']['title'], 'id': msg['sender_chat']['id'],
-                'username': msg['sender_chat'].get('username')}
-    elif msg['from']['id'] == GROUP:
-        return {'first_name': msg['chat']['title'], 'id': msg['chat']['id'], 'username': msg['chat'].get('username')}
-    else:
-        return msg['from']
+def get_user(msg: telegram.Message) -> User:
+    user = msg.sender_chat or msg.from_user
+    return User(name=user.full_name or user.title, uid=user.id, username=user.username)
 
 
-def get_users(msg: Dict) -> Tuple[Dict, Dict, bool, bool]:
+def get_users(msg: telegram.Message) -> Tuple[User, User]:
     msg_from = msg
-    if 'reply_to_message' in msg.keys():
-        msg_rpl = msg['reply_to_message']
-    else:
-        msg_rpl = msg_from.copy()
+    msg_rpl = msg.reply_to_message or msg_from
     from_user, rpl_user = get_user(msg_from), get_user(msg_rpl)
-    reply_self = rpl_user == from_user
-    mentioned = False
-
-    # Not replying to anything
-    if reply_self:
-
-        # Detect if the message contains a mention. If it has, use the mentioned user.
-        entities: List[Dict[str, Union[str, int]]] = msg['entities']
-        mentions = [e for e in entities if e['type'] == 'mention']
-        if mentions:
-            mentioned = True
-
-            # Find username
-            offset = mentions[0]['offset']
-            length = mentions[0]['length']
-            text = msg['text']
-            username = text[offset: offset + length].replace("@", "")
-            rpl_user = {'first_name': find_name_by_username(username), 'username': username}
-
-            # Remove mention from message text
-            msg['text'] = text[:offset] + text[offset + length:]
-
-        else:
-            rpl_user = {'first_name': '自己', 'id': rpl_user['id']}
-
-    return from_user, rpl_user, reply_self, mentioned
+    return from_user, rpl_user
 
 
-# Create mention string from user
-def mention(user: Dict[str, str]) -> str:
-    # Combine name
-    last = user.get('last_name', '')
-    first = user['first_name']
-    name = first + (f' {last}' if last else '')
-
-    # Create user reference link
-    username = user.get('username', '')
-    uid = user.get('id', -1)
-    link = f'tg://resolve?domain={username}' if (username and uid < 0) else f'tg://user?id={uid}'
-
-    return f"[{name}]({link})"
-
-
-def parse_command(command):
-    parsed = list(parser.search(command).groups())
+def parse_command(match: re.Match):
+    parsed = match.groups()
     predicate = parsed[1]
-    for escape in escaping:
+    for escape in ESCAPING:
+        predicate = delUsername('', predicate)
         predicate = predicate.replace(escape, escape[1:])
-    result = {'predicate': markdownEscape(predicate), 'complement': markdownEscape(parsed[2]), 'swap': parsed[0] != '/'}
+    result = {'predicate': htmlEscape(predicate), 'complement': htmlEscape(parsed[2]), 'swap': parsed[0] != '/'}
     return result
 
 
-def get_text(mention_from, mention_rpl, command):
+def get_text(user_from: User, user_rpl: User, command: dict):
+    mention_from = user_from.mention()
+    mention_rpl = user_rpl.mention(mention_self=user_from == user_rpl)
     if command['predicate'] == 'me':
         return f"{mention_from}{bool(command['complement']) * ' '}{command['complement']}！"
     elif command['predicate'] == 'you':
@@ -111,24 +92,31 @@ def get_text(mention_from, mention_rpl, command):
         return f"{mention_from} {command['predicate']} 了 {mention_rpl}！"
 
 
-def reply(update, context):
+def reply(update: telegram.Update, context: telegram.ext.CallbackContext):
     print(update.to_dict())
-    msg = update.to_dict()['message']
-    from_user, rpl_user, reply_self, mentioned = get_users(msg)
+    msg = update.effective_message
+    from_user, rpl_user = get_users(msg)
+    command = parse_command(context.match)
 
-    command = parse_command(del_username.sub('', msg['text']))
-    if command['swap'] and (not reply_self or mentioned):
+    if from_user == rpl_user:
+        mention_match = mentionParser.search(command['predicate'])
+        if mention_match:
+            mention = mentionParser.search(msg.text).group(1)
+            rpl_user = User(username=mention)
+            command['predicate'] = command['predicate'][:mention_match.start()]
+
+    if command['swap'] and (not from_user == rpl_user):
         (from_user, rpl_user) = (rpl_user, from_user)
 
-    text = get_text(mention(from_user), mention(rpl_user), command)
+    text = get_text(from_user, rpl_user, command)
     print(text, end='\n\n')
 
-    update.effective_message.reply_text(text, parse_mode='Markdown')
+    update.effective_message.reply_text(text, parse_mode='HTML')
 
 
 if __name__ == '__main__':
     updater = Updater(token=Token, use_context=True, request_kwargs={'proxy_url': telegram_proxy})
-    del_username = re.compile('@' + updater.bot.username, re.I)
+    delUsername = re.compile('@' + updater.bot.username, re.I).sub
     dp = updater.dispatcher
     dp.add_handler(MessageHandler(Filters.regex(parser), reply))
 
