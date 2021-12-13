@@ -38,14 +38,15 @@ class User:
         if page_title == self.name:  # user does not exist
             self.name = None
 
-    def mention(self, mention_self: bool = False) -> str:
+    def mention(self, mention_self: bool = False, pure: bool = False) -> str:
         if not self.name:
             return f'@{self.username}'
 
         mention_deep_link = (f'tg://resolve?domain={self.username}'
                              if (self.username and (not self.uid or self.uid < 0))
                              else f'tg://user?id={self.uid}')
-        return f'<a href ="{mention_deep_link}">{self.name if not mention_self else "自己"}</a>'
+        name = self.name if not mention_self else "自己"
+        return f'<a href ="{mention_deep_link}">{name}</a>' if not pure else name
 
     def __eq__(self, other):
         return (
@@ -80,16 +81,26 @@ def parse_command(match: re.Match):
 
 
 def get_text(user_from: User, user_rpl: User, command: dict):
+    rpl_self = user_from == user_rpl
     mention_from = user_from.mention()
-    mention_rpl = user_rpl.mention(mention_self=user_from == user_rpl)
-    if command['predicate'] == 'me':
-        return f"{mention_from}{bool(command['complement']) * ' '}{command['complement']}！"
-    elif command['predicate'] == 'you':
-        return f"{mention_rpl}{bool(command['complement']) * ' '}{command['complement']}！"
-    elif command['complement']:
-        return f"{mention_from} {command['predicate']} {mention_rpl} {command['complement']}！"
+    mention_rpl = user_rpl.mention(mention_self=rpl_self)
+    predicate, complement = command['predicate'], command['complement']
+
+    if predicate == 'me':
+        ret = f"{mention_from}{bool(complement) * ' '}{complement}"
+        halfwidth_mark = (complement or user_from.mention(pure=True))[-1].isascii()
+    elif predicate == 'you':
+        ret = f"{mention_rpl}{bool(complement) * ' '}{complement}"
+        halfwidth_mark = (complement or user_rpl.mention(mention_self=rpl_self, pure=True))[-1].isascii()
+    elif complement:
+        ret = f"{mention_from} {predicate} {mention_rpl} {complement}"
+        halfwidth_mark = complement[-1].isascii()
     else:
-        return f"{mention_from} {command['predicate']} 了 {mention_rpl}！"
+        ret = f"{mention_from} {predicate} 了 {mention_rpl}"
+        halfwidth_mark = mention_rpl[-1].isascii()
+    ret += '!' if halfwidth_mark else '！'
+
+    return ret
 
 
 def reply(update: telegram.Update, context: telegram.ext.CallbackContext):
