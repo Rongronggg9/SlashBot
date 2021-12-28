@@ -2,14 +2,14 @@ import os
 import re
 import requests
 import telegram
-from typing import Tuple, Optional, Callable
+from typing import Tuple, Optional, Callable, Union, Dict
 from telegram.ext import Updater, MessageHandler, filters
 
 Filters = filters.Filters
 parser = re.compile(r'^([\\/]_?)((?:[^ 　\t\\]|\\.)+)[ 　\t]*(.*)$')
 ESCAPING = ('\\ ', '\\　', '\\\t')
 htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
-mentionParser = re.compile(r'@([a-zA-Z]\w{4,})$')
+mentionParser = re.compile(r'@([a-zA-Z]\w{4,})')
 delUsername: Optional[Callable] = None  # placeholder
 
 # Docker env
@@ -70,7 +70,7 @@ def get_users(msg: telegram.Message) -> Tuple[User, User]:
     return from_user, rpl_user
 
 
-def parse_command(match: re.Match):
+def parse_command(match: re.Match) -> Dict[str, Union[str, bool]]:
     parsed = match.groups()
     predicate = parsed[1]
     for escape in ESCAPING:
@@ -115,6 +115,14 @@ def reply(update: telegram.Update, context: telegram.ext.CallbackContext):
             mention = mentionParser.search(msg.text).group(1)
             rpl_user = User(username=mention)
             command['predicate'] = command['predicate'][:mention_match.start()]
+        else:
+            mention_match = mentionParser.search(command['complement'])
+            if mention_match:
+                mention = mentionParser.search(msg.text).group(1)
+                rpl_user = User(username=mention)
+                complement = command['complement']
+                complement = complement[:mention_match.start()] + complement[mention_match.end():]
+                command['complement'] = complement.strip()
 
     if command['swap'] and (not from_user == rpl_user):
         (from_user, rpl_user) = (rpl_user, from_user)
