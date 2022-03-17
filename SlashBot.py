@@ -137,7 +137,7 @@ if __name__ == '__main__':
     updater = Updater(token=Token, use_context=True, request_kwargs={'proxy_url': telegram_proxy})
     delUsername = re.compile('@' + updater.bot.username, re.I).sub
     dp = updater.dispatcher
-    dp.add_handler(MessageHandler(Filters.regex(parser), reply))
+    dp.add_handler(MessageHandler(Filters.regex(parser), reply, run_async=True))
 
     updater.start_polling()
     updater.idle()
