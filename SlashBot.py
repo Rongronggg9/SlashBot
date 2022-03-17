@@ -130,7 +130,7 @@ def reply(update: telegram.Update, context: telegram.ext.CallbackContext):
     text = get_text(from_user, rpl_user, command)
     print(text, end='\n\n')
 
-    update.effective_message.reply_text(text, parse_mode='HTML')
+    update.effective_message.reply_text('\u200e' + text, parse_mode='HTML')
 
 
 if __name__ == '__main__':
