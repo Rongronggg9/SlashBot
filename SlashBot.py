@@ -8,9 +8,9 @@ from functools import partial
 
 Filters = filters.Filters
 parser = re.compile(r'^(?P<slash>[\\/]_?)'
-                    r'(?P<predicate>([^\s\\]|\\.)*)'
+                    r'(?P<predicate>([^\s\\]|\\.)*((?<=\S)\\)?)'
                     r'(\s+(?P<complement>.+))?$')
-ESCAPING = ('\\ ', '\\　', '\\\t')
+convertEscapes = partial(re.compile(r'\\(\s)').sub, r'\1')
 htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
 mentionParser = re.compile(r'@([a-zA-Z]\w{4,})')
 delUsername: Optional[Callable] = None  # placeholder
@@ -76,13 +76,15 @@ def get_users(msg: telegram.Message) -> Tuple[User, User]:
 def parse_command(match: re.Match) -> Dict[str, Union[str, bool]]:
     parsed = match.groupdict()
     predicate = parsed['predicate']
+    omit_le = predicate.endswith('\\')
+    predicate = predicate[:-1] if omit_le else predicate
+    predicate = convertEscapes(predicate)
     predicate = delUsername(predicate)
-    for escape in ESCAPING:
-        predicate = predicate.replace(escape, escape[1:])
     result = {'predicate': htmlEscape(predicate),
               'complement': htmlEscape(parsed['complement'] or ''),
               'slash': parsed['slash'],
-              'swap': parsed['slash'] != '/'}
+              'swap': parsed['slash'] != '/',
+              'omit_le': omit_le}
     return result
 
 
@@ -90,7 +92,8 @@ def get_text(user_from: User, user_rpl: User, command: dict):
     rpl_self = user_from == user_rpl
     mention_from = user_from.mention()
     mention_rpl = user_rpl.mention(mention_self=rpl_self)
-    slash, predicate, complement = command['slash'], command['predicate'], command['complement']
+    slash, predicate, complement, omit_le = \
+        command['slash'], command['predicate'], command['complement'], command['omit_le']
 
     if predicate == '':
         ret = '!' if slash == '/' else '¡'
@@ -105,7 +108,9 @@ def get_text(user_from: User, user_rpl: User, command: dict):
         ret = f"{mention_from} {predicate} {mention_rpl} {complement}"
         halfwidth_mark = complement[-1].isascii()
     else:
-        ret = f"{mention_from} {predicate} 了 {mention_rpl}"
+        ret = f"{mention_from} {predicate} "
+        ret += '了 ' if not omit_le else ''
+        ret += mention_rpl
         halfwidth_mark = mention_rpl[-1].isascii()
     ret += '!' if halfwidth_mark else ('！' if halfwidth_mark is not None else '')
 
