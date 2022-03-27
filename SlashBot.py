@@ -4,9 +4,12 @@ import requests
 import telegram
 from typing import Tuple, Optional, Callable, Union, Dict
 from telegram.ext import Updater, MessageHandler, filters
+from functools import partial
 
 Filters = filters.Filters
-parser = re.compile(r'^([\\/]_?)((?:[^ 　\t\\]|\\.)+)[ 　\t]*(.*)$')
+parser = re.compile(r'^(?P<slash>[\\/]_?)'
+                    r'(?P<predicate>([^\s\\]|\\.)*)'
+                    r'(\s+(?P<complement>.+))?$')
 ESCAPING = ('\\ ', '\\　', '\\\t')
 htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
 mentionParser = re.compile(r'@([a-zA-Z]\w{4,})')
@@ -71,12 +74,15 @@ def get_users(msg: telegram.Message) -> Tuple[User, User]:
 
 
 def parse_command(match: re.Match) -> Dict[str, Union[str, bool]]:
-    parsed = match.groups()
-    predicate = parsed[1]
+    parsed = match.groupdict()
+    predicate = parsed['predicate']
+    predicate = delUsername(predicate)
     for escape in ESCAPING:
-        predicate = delUsername('', predicate)
         predicate = predicate.replace(escape, escape[1:])
-    result = {'predicate': htmlEscape(predicate), 'complement': htmlEscape(parsed[2]), 'swap': parsed[0] != '/'}
+    result = {'predicate': htmlEscape(predicate),
+              'complement': htmlEscape(parsed['complement'] or ''),
+              'slash': parsed['slash'],
+              'swap': parsed['slash'] != '/'}
     return result
 
 
@@ -84,9 +90,12 @@ def get_text(user_from: User, user_rpl: User, command: dict):
     rpl_self = user_from == user_rpl
     mention_from = user_from.mention()
     mention_rpl = user_rpl.mention(mention_self=rpl_self)
-    predicate, complement = command['predicate'], command['complement']
+    slash, predicate, complement = command['slash'], command['predicate'], command['complement']
 
-    if predicate == 'me':
+    if predicate == '':
+        ret = '!' if slash == '/' else '¡'
+        halfwidth_mark = None
+    elif predicate == 'me':
         ret = f"{mention_from}{bool(complement) * ' '}{complement}"
         halfwidth_mark = (complement or user_from.mention(pure=True))[-1].isascii()
     elif predicate == 'you':
@@ -98,7 +107,7 @@ def get_text(user_from: User, user_rpl: User, command: dict):
     else:
         ret = f"{mention_from} {predicate} 了 {mention_rpl}"
         halfwidth_mark = mention_rpl[-1].isascii()
-    ret += '!' if halfwidth_mark else '！'
+    ret += '!' if halfwidth_mark else ('！' if halfwidth_mark is not None else '')
 
     return ret
 
@@ -135,7 +144,7 @@ def reply(update: telegram.Update, context: telegram.ext.CallbackContext):
 
 if __name__ == '__main__':
     updater = Updater(token=Token, use_context=True, request_kwargs={'proxy_url': telegram_proxy})
-    delUsername = re.compile('@' + updater.bot.username, re.I).sub
+    delUsername = partial(re.compile(r'@' + updater.bot.username, re.I).sub, '')
     dp = updater.dispatcher
     dp.add_handler(MessageHandler(Filters.regex(parser), reply, run_async=True))
 
