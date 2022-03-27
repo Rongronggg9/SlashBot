@@ -1,7 +1,6 @@
 # SlashBot
 
-[![Docker Cloud Automated build](https://img.shields.io/docker/cloud/automated/rongronggg9/slashbot)](https://hub.docker.com/r/rongronggg9/slashbot)
-[![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/rongronggg9/slashbot)](https://hub.docker.com/r/rongronggg9/slashbot)
+[![Docker Cloud Build Status](https://img.shields.io/github/workflow/status/Rongronggg9/SlashBot/Publish%20Docker%20image)](https://hub.docker.com/r/rongronggg9/slashbot)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rongronggg9/slashbot)](https://hub.docker.com/r/rongronggg9/slashbot)
 [![GitHub stars](https://img.shields.io/github/stars/Rongronggg9/SlashBot?style=social)](https://github.com/Rongronggg9/SlashBot)
 
