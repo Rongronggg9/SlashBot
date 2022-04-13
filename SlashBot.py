@@ -15,6 +15,9 @@ htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", 
 mentionParser = re.compile(r'@([a-zA-Z]\w{4,})')
 delUsername: Optional[Callable] = None  # placeholder
 
+PUNCTUATION_TAIL = '.,?!;:~(' \
+                   '。，？！；：～（'
+
 # Docker env
 Token = os.environ.get('TOKEN')
 if not Token:
@@ -49,7 +52,7 @@ class User:
                              if (self.username and (not self.uid or self.uid < 0))
                              else f'tg://user?id={self.uid}')
         name = self.name if not mention_self else "自己"
-        return f'<a href ="{mention_deep_link}">{name}</a>' if not pure else name
+        return f'<a href="{mention_deep_link}">{name}</a>' if not pure else name
 
     def __eq__(self, other):
         return (
@@ -88,6 +91,13 @@ def parse_command(match: re.Match) -> Dict[str, Union[str, bool]]:
     return result
 
 
+def get_tail(tail_char: str) -> str:
+    if tail_char in PUNCTUATION_TAIL:
+        return ''
+    halfwidth_mark = tail_char.isascii()
+    return '!' if halfwidth_mark else '！'
+
+
 def get_text(user_from: User, user_rpl: User, command: dict):
     rpl_self = user_from == user_rpl
     mention_from = user_from.mention()
@@ -97,23 +107,20 @@ def get_text(user_from: User, user_rpl: User, command: dict):
 
     if predicate == '':
         ret = '!' if slash == '/' else '¡'
-        halfwidth_mark = None
     elif predicate == 'me':
         ret = f"{mention_from}{bool(complement) * ' '}{complement}"
-        halfwidth_mark = (complement or user_from.mention(pure=True))[-1].isascii()
+        ret += get_tail((complement or user_from.mention(pure=True))[-1])
     elif predicate == 'you':
         ret = f"{mention_rpl}{bool(complement) * ' '}{complement}"
-        halfwidth_mark = (complement or user_rpl.mention(mention_self=rpl_self, pure=True))[-1].isascii()
+        ret += get_tail((complement or user_rpl.mention(mention_self=rpl_self, pure=True))[-1])
     elif complement:
         ret = f"{mention_from} {predicate} {mention_rpl} {complement}"
-        halfwidth_mark = complement[-1].isascii()
+        ret += get_tail(complement[-1])
     else:
         ret = f"{mention_from} {predicate} "
         ret += '了 ' if not omit_le else ''
         ret += mention_rpl
-        halfwidth_mark = mention_rpl[-1].isascii()
-    ret += '!' if halfwidth_mark else ('！' if halfwidth_mark is not None else '')
-
+        ret += get_tail(mention_rpl[-1])
     return ret
 
 
