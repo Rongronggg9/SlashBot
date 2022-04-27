@@ -23,5 +23,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           tags: ${{ secrets.DOCKER_USERNAME }}/slashbot:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/slashbot:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/slashbot:buildcache,mode=max
+          cache-from: type=gha,scope=docker-release
+          cache-to: type=gha,scope=docker-release,mode=max
