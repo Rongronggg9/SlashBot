@@ -91,16 +91,20 @@ def get_users(msg: telegram.Message) -> tuple[User, User]:
     return from_user, rpl_user
 
 
-def parse_command(ctx: telegram.ext.CallbackContext) -> dict[str, Union[str, bool]]:
+def parse_command(ctx: telegram.ext.CallbackContext) -> Optional[dict[str, Union[str, bool]]]:
     match = ctx.match
     parsed = match.groupdict()
     predicate = parsed['predicate']
+    complement = parsed['complement']
+    if not predicate and complement:
+        return None  # invalid command
+
     omit_le = predicate.endswith('\\')
     predicate = predicate[:-1] if omit_le else predicate
     predicate = convertEscapes(predicate)
     predicate = ctx.bot_data['delUsername'](predicate)
     result = {'predicate': htmlEscape(predicate),
-              'complement': htmlEscape(parsed['complement'] or ''),
+              'complement': htmlEscape(complement or ''),
               'slash': parsed['slash'],
               'swap': parsed['slash'] != '/',
               'omit_le': omit_le}
@@ -141,11 +145,14 @@ def get_text(user_from: User, user_rpl: User, command: dict):
 
 
 def reply(update: telegram.Update, ctx: telegram.ext.CallbackContext):
+    command = parse_command(ctx)
+    if not command:
+        return
+
     logger = ctx.bot_data['logger']
     logger.debug(str(update.to_dict()))
     msg = update.effective_message
     from_user, rpl_user = get_users(msg)
-    command = parse_command(ctx)
 
     if from_user == rpl_user:
         mention_match = mentionParser.search(command['predicate'])
