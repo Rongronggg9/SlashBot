@@ -16,6 +16,7 @@ Filters = filters.Filters
 parser = re.compile(r'^(?P<slash>[\\/]_?)'
                     r'(?P<predicate>([^\s\\]|\\.)*((?<=\S)\\)?)'
                     r'(\s+(?P<complement>.+))?$')
+ouenParser = re.compile(r'^\\ .* /$|^＼ .* ／$')
 convertEscapes = partial(re.compile(r'\\(\s)').sub, r'\1')
 htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
 mentionParser = re.compile(r'@([a-zA-Z]\w{4,})')
@@ -178,9 +179,23 @@ def reply(update: telegram.Update, ctx: telegram.ext.CallbackContext):
     update.effective_message.reply_text('\u200e' + text, parse_mode='HTML')
 
 
+def repeat(update: telegram.Update, ctx: telegram.ext.CallbackContext):
+    logger = ctx.bot_data['logger']
+    logger.debug(str(update.to_dict()))
+
+    chat = update.effective_chat
+    msg = update.effective_message
+    if chat.id < 0:
+        chat = ctx.bot.get_chat(chat.id)
+
+    logger.info(msg.text)
+    msg.copy(chat.id) if chat.has_protected_content else msg.forward(chat.id)
+
+
 def start(token: str):
     updater = Updater(token=token, use_context=True, request_kwargs={'proxy_url': TELEGRAM_PROXY})
     dp: Dispatcher = updater.dispatcher
+    dp.add_handler(MessageHandler(Filters.regex(ouenParser), repeat, run_async=True))
     dp.add_handler(MessageHandler(Filters.regex(parser), reply, run_async=True))
     username = f'@{updater.bot.username}'
     logger = _logger.bind(username=username)
