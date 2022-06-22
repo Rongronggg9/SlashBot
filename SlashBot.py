@@ -19,8 +19,18 @@ Filters = filters.Filters
 parser = re.compile(r'^(?P<slash>[\\/]_?)'
                     r'(?P<predicate>([^\s\\]|\\.)*((?<=\S)\\)?)'
                     r'(\s+(?P<complement>.+))?$')
-ouenParser = re.compile(r'^\\ .* /$|^＼ .* ／$')
-pinParser = re.compile(r'[\\/]_?pin')
+ouenParser = re.compile(r'^('
+                        r'\\ .* /'
+                        r'|'
+                        r'＼ .* ／'
+                        r'|'
+                        r'(\\.*/\s*){2,}'
+                        r'|'
+                        r'(＼.*／\s*){2,}}'
+                        r'|'
+                        r'[/\\＼／]{2,}'
+                        r')$')
+pinParser = re.compile(r'^[\\/]_?pin$')
 
 convertEscapes = partial(re.compile(r'\\(\s)').sub, r'\1')
 htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
