@@ -11,18 +11,36 @@ from telegram.ext import Updater, MessageHandler, filters, Dispatcher
 from functools import partial
 from threading import Thread
 from time import sleep
+from itertools import product as _product
+from random import choice
 
 Filters = filters.Filters
+
 parser = re.compile(r'^(?P<slash>[\\/]_?)'
                     r'(?P<predicate>([^\s\\]|\\.)*((?<=\S)\\)?)'
                     r'(\s+(?P<complement>.+))?$')
 ouenParser = re.compile(r'^\\ .* /$|^＼ .* ／$')
+pinParser = re.compile(r'[\\/]_?pin')
+
 convertEscapes = partial(re.compile(r'\\(\s)').sub, r'\1')
 htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
 mentionParser = re.compile(r'@([a-zA-Z]\w{4,})')
 
+product = lambda a, b: tuple(map('，'.join, _product(a, b)))
+
 PUNCTUATION_TAIL = '.,?!;:~(' \
                    '。，？！；：～（'
+VEGETABLE = (
+        product(
+            {'我太菜了', '我好菜', '我好菜啊', '我菜死了'},
+            {'pin 不了这条消息', '学不会怎么 pin 这条消息', '连 pin 都不被允许'}
+        )
+        +
+        product(
+            {'我学不会怎么 pin 这条消息', '这么简单的消息我都 pin 不了', '好想 pin 这条消息啊，但我做不到'},
+            {'需要浇浇', '怎么会有我这么菜的 bot', '我只能混吃等死'}
+        )
+)
 
 # Docker env
 TOKENS = re.compile(r'[^a-zA-Z\-_\d:]+').split(os.environ.get('TOKEN', ''))
@@ -192,9 +210,27 @@ def repeat(update: telegram.Update, ctx: telegram.ext.CallbackContext):
     msg.copy(chat.id) if chat.has_protected_content else msg.forward(chat.id)
 
 
+def pin(update: telegram.Update, ctx: telegram.ext.CallbackContext):
+    logger = ctx.bot_data['logger']
+    logger.debug(str(update.to_dict()))
+
+    msg = update.effective_message
+    msg_to_pin = msg.reply_to_message or msg
+
+    try:
+        msg_to_pin.unpin()
+        msg_to_pin.pin(disable_notification=True)
+        logger.info(f'Pinned {msg_to_pin.text}')
+    except telegram.error.BadRequest as e:
+        vegetable = f'{choice(VEGETABLE)} ({e})'
+        msg_to_pin.reply_text(vegetable)
+        logger.warning(vegetable)
+
+
 def start(token: str):
     updater = Updater(token=token, use_context=True, request_kwargs={'proxy_url': TELEGRAM_PROXY})
     dp: Dispatcher = updater.dispatcher
+    dp.add_handler(MessageHandler(Filters.regex(pinParser), pin, run_async=True))
     dp.add_handler(MessageHandler(Filters.regex(ouenParser), repeat, run_async=True))
     dp.add_handler(MessageHandler(Filters.regex(parser), reply, run_async=True))
     username = f'@{updater.bot.username}'
