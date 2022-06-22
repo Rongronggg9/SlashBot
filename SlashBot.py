@@ -40,7 +40,8 @@ product = lambda a, b: tuple(map('，'.join, _product(a, b)))
 
 PUNCTUATION_TAIL = '.,?!;:~(' \
                    '。，？！；：～（'
-VEGETABLE = (
+VEGETABLE = {
+    'permission_denied':
         product(
             {'我太菜了', '我好菜', '我好菜啊', '我菜死了'},
             {'pin 不了这条消息', '学不会怎么 pin 这条消息', '连 pin 都不被允许'}
@@ -48,9 +49,19 @@ VEGETABLE = (
         +
         product(
             {'我学不会怎么 pin 这条消息', '这么简单的消息我都 pin 不了', '好想 pin 这条消息啊，但我做不到'},
-            {'需要浇浇', '怎么会有我这么菜的 bot', '我只能混吃等死'}
+            {'需要浇浇', '怎么会有我这么菜的 bot', '我只能混吃等死', '我怎么会菜成这样'}
         )
-)
+        +
+        product(
+            {'这可要我怎么 pin 呀', '怎么才能 pin 这条消息呀', 'pin 不动呀，这可怎么办'},
+            {'拿大头针钉上吗', '找把锤子敲到柱子上吗', '触及知识盲区了都'}
+        ),
+    'reject':
+        product(
+            {'我累了', '我好懒，又懒又菜', '我的 bot 生只要像这样躺着混日子就已经很幸福了'},
+            {'根本不想 pin 这条消息', '才不要 pin 这条消息', '还是另请高明吧', '一点 pin 的动力都没有'}
+        )
+}
 
 # Docker env
 TOKENS = re.compile(r'[^a-zA-Z\-_\d:]+').split(os.environ.get('TOKEN', ''))
@@ -225,14 +236,19 @@ def pin(update: telegram.Update, ctx: telegram.ext.CallbackContext):
     logger.debug(str(update.to_dict()))
 
     msg = update.effective_message
-    msg_to_pin = msg.reply_to_message or msg
+    msg_to_pin = msg.reply_to_message
+    if not msg_to_pin:
+        vegetable = f'{choice(VEGETABLE["reject"])} (Reply to a message to use the command)'
+        msg.reply_text(vegetable)
+        logger.warning(vegetable)
+        return
 
     try:
         msg_to_pin.unpin()
         msg_to_pin.pin(disable_notification=True)
         logger.info(f'Pinned {msg_to_pin.text}')
     except telegram.error.BadRequest as e:
-        vegetable = f'{choice(VEGETABLE)} ({e})'
+        vegetable = f'{choice(VEGETABLE["permission_denied"])} ({e})'
         msg_to_pin.reply_text(vegetable)
         logger.warning(vegetable)
 
