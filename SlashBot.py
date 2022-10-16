@@ -256,9 +256,9 @@ def pin(update: telegram.Update, ctx: telegram.ext.CallbackContext):
 def start(token: str):
     updater = Updater(token=token, use_context=True, request_kwargs={'proxy_url': TELEGRAM_PROXY})
     dp: Dispatcher = updater.dispatcher
-    dp.add_handler(MessageHandler(Filters.regex(pinParser), pin, run_async=True))
-    dp.add_handler(MessageHandler(Filters.regex(ouenParser), repeat, run_async=True))
-    dp.add_handler(MessageHandler(Filters.regex(parser), reply, run_async=True))
+    dp.add_handler(MessageHandler(Filters.regex(pinParser) & ~Filters.update.edited_message, pin, run_async=True))
+    dp.add_handler(MessageHandler(Filters.regex(ouenParser) & ~Filters.update.edited_message, repeat, run_async=True))
+    dp.add_handler(MessageHandler(Filters.regex(parser) & ~Filters.update.edited_message, reply, run_async=True))
     username = f'@{updater.bot.username}'
     logger = _logger.bind(username=username)
     dp.bot_data['delUsername'] = partial(re.compile(username, re.I).sub, '')
