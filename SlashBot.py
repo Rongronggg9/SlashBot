@@ -13,6 +13,7 @@ from threading import Thread
 from time import sleep
 from itertools import product as _product
 from random import Random, SystemRandom
+from collections import deque, Counter
 
 Filters = filters.Filters
 
@@ -40,8 +41,11 @@ product = lambda a, b: tuple(map('，'.join, _product(a, b)))
 
 PUNCTUATION_TAIL = '.,?!;:~(' \
                    '。，？！；：～（'
-VEGETABLE = {
-    'permission_denied':
+
+
+class Vegetable:
+    _counter = Counter()
+    permission_denied = deque(
         product(
             {'我太菜了', '我好菜', '我好菜啊', '我菜死了'},
             {'pin 不了这条消息', '学不会怎么 pin 这条消息', '连 pin 都不被允许'}
@@ -55,13 +59,23 @@ VEGETABLE = {
         product(
             {'这可要我怎么 pin 呀', '怎么才能 pin 这条消息呀', 'pin 不动呀，这可怎么办'},
             {'拿大头针钉上吗', '找把锤子敲到柱子上吗', '触及知识盲区了都'}
-        ),
-    'reject':
+        )
+    )
+    reject = deque(
         product(
             {'我累了', '我好懒，又懒又菜', '我的 bot 生只要像这样躺着混日子就已经很幸福了'},
             {'根本不想 pin 这条消息', '才不要 pin 这条消息', '还是另请高明吧', '一点 pin 的动力都没有'}
         )
-}
+    )
+
+    def __class_getitem__(cls, item: str):
+        collection = getattr(cls, item)
+        if cls._counter[item] % len(collection) == 0:
+            random.shuffle(collection)
+        cls._counter[item] += 1
+        collection.rotate()
+        return collection[-1]
+
 
 _logger.remove()
 _logger.add(sys.stderr,
@@ -244,7 +258,7 @@ def pin(update: telegram.Update, ctx: telegram.ext.CallbackContext):
     msg = update.effective_message
     msg_to_pin = msg.reply_to_message
     if not msg_to_pin:
-        vegetable = f'{random.choice(VEGETABLE["reject"])} (Reply to a message to use the command)'
+        vegetable = f'{Vegetable["reject"]} (Reply to a message to use the command)'
         msg.reply_text(vegetable)
         logger.warning(vegetable)
         return
@@ -254,7 +268,7 @@ def pin(update: telegram.Update, ctx: telegram.ext.CallbackContext):
         msg_to_pin.pin(disable_notification=True)
         logger.info(f'Pinned {msg_to_pin.text}')
     except telegram.error.BadRequest as e:
-        vegetable = f'{random.choice(VEGETABLE["permission_denied"])} ({e})'
+        vegetable = f'{Vegetable["permission_denied"]} ({e})'
         msg_to_pin.reply_text(vegetable)
         logger.warning(vegetable)
 
