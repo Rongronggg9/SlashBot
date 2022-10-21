@@ -16,7 +16,7 @@ from random import choice
 
 Filters = filters.Filters
 
-parser = re.compile(r'^(?P<slash>[\\/]_?)'
+parser = re.compile(r'^(?P<slash>[\\/]_?\$?)'
                     r'(?P<predicate>([^\s\\]|\\.)*((?<=\S)\\)?)'
                     r'(\s+(?P<complement>.+))?$')
 ouenParser = re.compile(r'^('
@@ -146,7 +146,7 @@ def parse_command(ctx: telegram.ext.CallbackContext) -> Optional[dict[str, Union
     result = {'predicate': htmlEscape(predicate),
               'complement': htmlEscape(complement or ''),
               'slash': parsed['slash'],
-              'swap': parsed['slash'] != '/',
+              'swap': parsed['slash'] not in ('/', '/$'),
               'omit_le': omit_le}
     return result
 
@@ -166,7 +166,7 @@ def get_text(user_from: User, user_rpl: User, command: dict):
         command['slash'], command['predicate'], command['complement'], command['omit_le']
 
     if predicate == '':
-        ret = '!' if slash == '/' else '¡'
+        ret = '!' if not command['swap'] else '¡'
     elif predicate == 'me':
         ret = f"{mention_from}{bool(complement) * ' '}{complement}"
         ret += get_tail((complement or user_from.mention(pure=True))[-1])
