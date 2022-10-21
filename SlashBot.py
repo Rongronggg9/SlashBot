@@ -12,7 +12,7 @@ from functools import partial
 from threading import Thread
 from time import sleep
 from itertools import product as _product
-from random import choice
+from random import Random, SystemRandom
 
 Filters = filters.Filters
 
@@ -63,14 +63,6 @@ VEGETABLE = {
         )
 }
 
-# Docker env
-TOKENS = re.compile(r'[^a-zA-Z\-_\d:]+').split(os.environ.get('TOKEN', ''))
-if not TOKENS:
-    raise ValueError('no any valid token found')
-
-TELEGRAM_PROXY = os.environ.get('PROXY', '')
-REQUEST_PROXIES = {'all': TELEGRAM_PROXY} if TELEGRAM_PROXY else None
-
 _logger.remove()
 _logger.add(sys.stderr,
             format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green>"
@@ -78,6 +70,20 @@ _logger.add(sys.stderr,
                    "|<cyan>{extra[username]:^15}</cyan>"
                    "|<level>{message}</level>",
             level="DEBUG")
+
+try:
+    random = SystemRandom()
+except NotImplementedError:
+    random = Random()
+    _logger.warning('SystemRandom is not available, using Random instead')
+
+# Docker env
+TOKENS = re.compile(r'[^a-zA-Z\-_\d:]+').split(os.environ.get('TOKEN', ''))
+if not TOKENS:
+    raise ValueError('no any valid token found')
+
+TELEGRAM_PROXY = os.environ.get('PROXY', '')
+REQUEST_PROXIES = {'all': TELEGRAM_PROXY} if TELEGRAM_PROXY else None
 
 _updaters: list[Updater] = []
 
@@ -238,7 +244,7 @@ def pin(update: telegram.Update, ctx: telegram.ext.CallbackContext):
     msg = update.effective_message
     msg_to_pin = msg.reply_to_message
     if not msg_to_pin:
-        vegetable = f'{choice(VEGETABLE["reject"])} (Reply to a message to use the command)'
+        vegetable = f'{random.choice(VEGETABLE["reject"])} (Reply to a message to use the command)'
         msg.reply_text(vegetable)
         logger.warning(vegetable)
         return
@@ -248,7 +254,7 @@ def pin(update: telegram.Update, ctx: telegram.ext.CallbackContext):
         msg_to_pin.pin(disable_notification=True)
         logger.info(f'Pinned {msg_to_pin.text}')
     except telegram.error.BadRequest as e:
-        vegetable = f'{choice(VEGETABLE["permission_denied"])} ({e})'
+        vegetable = f'{random.choice(VEGETABLE["permission_denied"])} ({e})'
         msg_to_pin.reply_text(vegetable)
         logger.warning(vegetable)
 
