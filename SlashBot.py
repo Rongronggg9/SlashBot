@@ -34,7 +34,7 @@ ouenParser = re.compile(r'^('
 pinParser = re.compile(r'^[\\/]_?pin$')
 
 convertEscapes = partial(re.compile(r'\\(\s)').sub, r'\1')
-htmlEscape = lambda s: s.replace("<", "&lt;").replace(">", "&gt;").replace("&", "&amp;")
+htmlEscape = lambda s: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 mentionParser = re.compile(r'@([a-zA-Z]\w{4,})')
 
 product = lambda a, b: tuple(map('，'.join, _product(a, b)))
