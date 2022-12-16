@@ -40,9 +40,7 @@ pinParser = re.compile(
     r'^[\\/]_?pin$'
 )
 randomStickerParser = re.compile(
-    r'^([\\/])'
-    r'(_?)'
-    r'(\1\2?)+$'
+    r'^([\\/]_?){2,}$'
 )
 
 convertEscapes = partial(re.compile(r'\\(\s)').sub, r'\1')
