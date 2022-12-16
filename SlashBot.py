@@ -25,15 +25,17 @@ parser = re.compile(
 )
 ouenParser = re.compile(
     r'^('
-    r'\\ .* /'
+    r'\\+ .* /+'
     r'|'
-    r'＼ .* ／'
+    r'＼+ .* ／+'
     r'|'
     r'(\\.*/\s*){2,}'
     r'|'
     r'(＼.*／\s*){2,}'
     r'|'
-    r'[/\\＼／]{2,}'
+    r'\\{2,}/{2,}'
+    r'|'
+    r'＼{2,}／{2,}'
     r')$'
 )
 pinParser = re.compile(
@@ -335,10 +337,10 @@ def random_sticker(update: telegram.Update, _ctx: telegram.ext.CallbackContext, 
 def start(token: str):
     updater = Updater(token=token, use_context=True, request_kwargs={'proxy_url': TELEGRAM_PROXY})
     dp: Dispatcher = updater.dispatcher
+    dp.add_handler(MessageHandler(Filters.regex(ouenParser) & ~Filters.update.edited_message, repeat, run_async=True))
     dp.add_handler(MessageHandler(Filters.regex(randomStickerParser) & ~Filters.update.edited_message, random_sticker,
                                   run_async=True))
     dp.add_handler(MessageHandler(Filters.regex(pinParser) & ~Filters.update.edited_message, pin, run_async=True))
-    dp.add_handler(MessageHandler(Filters.regex(ouenParser) & ~Filters.update.edited_message, repeat, run_async=True))
     dp.add_handler(MessageHandler(Filters.regex(parser) & ~Filters.update.edited_message, reply, run_async=True))
     username = f'@{updater.bot.username}'
     logger = _logger.bind(username=username)
