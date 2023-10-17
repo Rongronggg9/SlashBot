@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import re
+import html
 import requests
 import telegram
 from loguru import logger as _logger
@@ -171,10 +172,13 @@ class User:
 
     def __get_user_by_username(self):
         r = requests.get(f'https://t.me/{self.username}', proxies=REQUEST_PROXIES)
-        self.name = re.search(r'(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
+        og_t = re.search(r'(?<=<meta property="og:title" content=").*(?=")', r.text, re.IGNORECASE).group(0)
+        name = html.unescape(og_t) if og_t else None
         page_title = re.search(r'(?<=<title>).*(?=</title>)', r.text, re.IGNORECASE).group(0)
-        if page_title == self.name:  # user does not exist
+        if page_title == og_t:  # user does not exist
             self.name = None
+        elif name:
+            self.name = name
 
     def mention(self, mention_self: bool = False, pure: bool = False) -> str:
         if not self.name:
@@ -184,6 +188,7 @@ class User:
                              if (self.username and (not self.uid or self.uid < 0))
                              else f'tg://user?id={self.uid}')
         name = self.name if not mention_self else "自己"
+        name = htmlEscape(name)
         return f'<a href="{mention_deep_link}">{name}</a>' if not pure else name
 
     def __eq__(self, other):
