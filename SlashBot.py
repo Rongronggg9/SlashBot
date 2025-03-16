@@ -313,14 +313,17 @@ def reply(update: telegram.Update, ctx: telegram.ext.CallbackContext):
 
 
 @log
-def repeat(update: telegram.Update, ctx: telegram.ext.CallbackContext, logger: _logger):
+def repeat(update: telegram.Update, _ctx: telegram.ext.CallbackContext, logger: _logger):
     chat = update.effective_chat
     msg = update.effective_message
-    if chat.id < 0:
-        chat = ctx.bot.get_chat(chat.id)
+    tid = msg.message_thread_id
 
     logger.info(msg.text)
-    msg.copy(chat.id) if chat.has_protected_content else msg.forward(chat.id)
+    (
+        msg.copy
+        if msg.has_protected_content
+        else msg.forward
+    )(chat.id, message_thread_id=tid)
 
 
 @log
