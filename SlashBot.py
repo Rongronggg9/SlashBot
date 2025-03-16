@@ -206,9 +206,21 @@ def get_user(msg: telegram.Message) -> User:
     return User(name=user.full_name or user.title, uid=user.id, username=user.username)
 
 
+def get_reply(msg: telegram.Message) -> Optional[telegram.Message]:
+    """
+    Telegram creates a false reply to the forum_topic_created service message
+    when a topic message is not replying to anything.
+    Filter it out.
+    """
+    rpl = msg.reply_to_message
+    if rpl and not rpl.forum_topic_created:
+        return rpl
+    return None
+
+
 def get_users(msg: telegram.Message) -> tuple[User, User]:
     msg_from = msg
-    msg_rpl = msg.reply_to_message or msg_from
+    msg_rpl = get_reply(msg) or msg_from
     from_user, rpl_user = get_user(msg_from), get_user(msg_rpl)
     return from_user, rpl_user
 
@@ -314,7 +326,7 @@ def repeat(update: telegram.Update, ctx: telegram.ext.CallbackContext, logger: _
 @log
 def pin(update: telegram.Update, _ctx: telegram.ext.CallbackContext, logger: _logger):
     msg = update.effective_message
-    msg_to_pin = msg.reply_to_message
+    msg_to_pin = get_reply(msg)
     if not msg_to_pin:
         vegetable = f'{Vegetable["reject"]} (Reply to a message to use the command)'
         msg.reply_text(vegetable)
